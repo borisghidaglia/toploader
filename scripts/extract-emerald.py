@@ -6,7 +6,8 @@ Builds Toploader Mart's sprites and fonts from the pokeemerald decompilation
     python3 -m venv .venv && .venv/bin/pip install pillow fonttools brotli skia-pathops
     .venv/bin/python scripts/extract-emerald.py /tmp/pokeemerald
 
-Writes the PNGs and fonts to public/emerald/.
+Writes the PNGs and fonts to public/emerald/, the fonts again as TTFs for the
+link preview images to assets/og/, and the favicon and home screen icon to app/.
 """
 
 import re
@@ -24,6 +25,7 @@ SRC = Path(sys.argv[1] if len(sys.argv) > 1 else "/tmp/pokeemerald")
 APP = Path(__file__).resolve().parent.parent
 SPRITES = APP / "public/emerald"
 FONTS = APP / "public/emerald/fonts"
+OG_FONTS = APP / "assets/og"
 
 
 # --- GBA colors and graphics -------------------------------------------------
@@ -276,6 +278,28 @@ def mart():
     save(shelf, "shelf.png")
 
 
+# --- Icons --------------------------------------------------------------------
+
+
+def icons():
+    """The Poké Ball as it flies in battle. It's a 16px sprite, so every favicon size is a whole multiple."""
+    sheet = Image.open(SRC / "graphics/balls/poke.png")
+    pal = png_palette(sheet)
+    ball = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
+    for i, tile in enumerate(tiles_of(sheet.crop((0, 0, 16, 16)))):  # frame 0, closed
+        draw_tile(ball, tile, (i % 2) * 8, (i // 2) * 8, pal)
+    sizes = [ball.resize((n, n), Image.Resampling.NEAREST) for n in (48, 32, 16)]
+    # Pillow writes the sizes no larger than the image it saves from, taking each from append_images.
+    sizes[0].save(APP / "app/favicon.ico", sizes=[s.size for s in sizes], append_images=sizes[1:])
+
+    # Home screens fill transparency with black, so this one stands on the shop floor's green.
+    ball = ball.crop(ball.getbbox())
+    icon = Image.new("RGBA", (180, 180), (*gba_color((164, 238, 189)), 255))
+    big = ball.resize((ball.width * 12, ball.height * 12), Image.Resampling.NEAREST)
+    icon.alpha_composite(big, ((180 - big.width) // 2, (180 - big.height) // 2))
+    icon.convert("RGB").save(APP / "app/apple-icon.png", optimize=True)
+
+
 # --- Fonts --------------------------------------------------------------------
 
 PIXEL = 64  # font units per GBA pixel: a 16px cell is a 1024-unit em
@@ -397,8 +421,21 @@ def build_font(sheet, widths_name, family, shadow):
     fb.font["COLR"] = buildCOLR(layers)
     fb.font["CPAL"] = buildCPAL([[tuple(c / 255 for c in shadow) + (1.0,)]])
     FONTS.mkdir(parents=True, exist_ok=True)
+    slug = family.lower().replace(" ", "-")
     fb.font.flavor = "woff2"
-    fb.save(FONTS / f"{family.lower().replace(' ', '-')}.woff2")
+    fb.save(FONTS / f"{slug}.woff2")
+
+    # The link preview images are drawn by next/og, which reads neither WOFF2 nor
+    # color layers. It gets each font twice, as plain TTFs: the letters, and the
+    # same text in shadow glyphs to draw under them.
+    OG_FONTS.mkdir(parents=True, exist_ok=True)
+    fb.font.flavor = None
+    del fb.font["COLR"], fb.font["CPAL"]
+    fb.save(OG_FONTS / f"{slug}.ttf")
+    for table in fb.font["cmap"].tables:
+        table.cmap = {code: f"{name}.shadow" for code, name in table.cmap.items()}
+    fb.setupNameTable({"familyName": f"{family} Shadow", "styleName": "Regular"})
+    fb.save(OG_FONTS / f"{slug}-shadow.ttf")
     return len(cmap)
 
 
@@ -408,6 +445,7 @@ def main():
     popup_text = popup()
     interface()
     mart()
+    icons()
     shadow = jasc("graphics/interface/std_menu.pal")[3]
     for sheet, widths_name, family in [("latin_normal", "Normal", "Emerald Normal"), ("latin_narrow", "Narrow", "Emerald Narrow")]:
         print(family, build_font(sheet, widths_name, family, shadow), "characters")
