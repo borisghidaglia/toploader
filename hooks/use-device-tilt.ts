@@ -64,11 +64,13 @@ function listen() {
 
 function init() {
   if (typeof window === "undefined" || !("DeviceOrientationEvent" in window)) return;
+  // Only handheld devices have a tilt worth following; desktop Chrome exposes the API too.
+  if (!window.matchMedia("(pointer: coarse)").matches) return;
   const Orientation = DeviceOrientationEvent as OrientationEventWithPermission;
   if (typeof Orientation.requestPermission === "function") {
     // iOS: needs a tap before it will report anything.
     setStatus("needs-permission");
-  } else if (window.matchMedia("(pointer: coarse)").matches) {
+  } else {
     // Android: events flow without asking. Status flips to "active" on the first reading.
     listen();
   }

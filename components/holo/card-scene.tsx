@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, type RefObject } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { useTexture } from "@react-three/drei";
 import * as THREE from "three";
@@ -8,38 +8,33 @@ import type { Card } from "@/lib/cards";
 import { tilt } from "@/hooks/use-device-tilt";
 import { CARD_H, CARD_W, createCardGeometry } from "./card-geometry";
 import { createHoloMaterial, foilMode, type HoloMaterial } from "./holo-material";
+import { CARD_FILL, type StageInput } from "./stage-input";
 
 const TAU = Math.PI * 2;
 
-/** Mutable input written by the DOM wrapper, read every frame by the scene. */
-export type StageInput = {
-  dragging: boolean;
-  dragDx: number; // px accumulated since last frame
-  hover: { x: number; y: number } | null; // -1..1 within the stage, mouse only
-  turn: number; // pending half-turns from keyboard (±1)
-  reducedMotion: boolean;
-};
-
-export function createStageInput(): StageInput {
-  return { dragging: false, dragDx: 0, hover: null, turn: 0, reducedMotion: false };
-}
-
-/** Share of the stage's height the card fills at rest. Mirrored by the static fallback image. */
-export const CARD_FILL = 0.74;
 const FOV = 30;
 
-function FitCamera() {
+export type Framing = {
+  /** Share of the stage's height the card fills at rest. */
+  fill: number;
+  /** Shift the card up by this share of the stage height (screen-space, no perspective change). */
+  lift: number;
+};
+
+function FitCamera({ fill, lift }: Framing) {
   const { camera, size } = useThree();
   useEffect(() => {
     const cam = camera as THREE.PerspectiveCamera;
     const span = 2 * Math.tan(THREE.MathUtils.degToRad(FOV / 2));
     const aspect = size.width / size.height;
-    // Fill CARD_FILL of the height, unless that would overflow 86% of the width.
-    const byHeight = CARD_H / (CARD_FILL * span);
+    // Fill `fill` of the height, unless that would overflow 86% of the width.
+    const byHeight = CARD_H / (fill * span);
     const byWidth = CARD_W / (0.86 * span * aspect);
     cam.position.set(0, 0, Math.max(byHeight, byWidth));
+    if (lift) cam.setViewOffset(size.width, size.height, 0, lift * size.height, size.width, size.height);
+    else cam.clearViewOffset();
     cam.updateProjectionMatrix();
-  }, [camera, size]);
+  }, [camera, size, fill, lift]);
   return null;
 }
 
@@ -65,9 +60,11 @@ type HoloCardProps = {
 };
 
 function HoloCard({ cards, index, input: inputRef, onReady }: HoloCardProps) {
-  const fronts = useTexture(cards.map((c) => c.image));
-  const back = useTexture("/card-back.webp");
+  // Only the first card's art blocks the first frame; the rest load when they're picked.
+  const [firstIndex] = useState(index);
+  const [first, back] = useTexture([cards[firstIndex].image, "/card-back.webp"]);
   const gl = useThree((s) => s.gl);
+  const fronts = useRef(new Map<string, THREE.Texture>());
 
   const geometry = useMemo(() => createCardGeometry(), []);
   const materials = useMemo(
@@ -91,38 +88,54 @@ function HoloCard({ cards, index, input: inputRef, onReady }: HoloCardProps) {
     lastIndex: index,
   });
 
-  useEffect(() => {
-    const aniso = Math.min(8, gl.capabilities.getMaxAnisotropy());
-    for (const t of [...fronts, back]) {
+  const prepare = useCallback(
+    (t: THREE.Texture) => {
       t.colorSpace = THREE.SRGBColorSpace;
-      t.anisotropy = aniso;
+      t.anisotropy = Math.min(8, gl.capabilities.getMaxAnisotropy());
       t.needsUpdate = true;
-    }
-    holo().uniforms.uBack.value = back;
-    onReady?.();
-  }, [fronts, back, gl, onReady]);
+      return t;
+    },
+    [gl],
+  );
 
-  // A new selection spins the card a full turn in the direction of travel;
-  // the art is swapped while the back faces the viewer.
+  useEffect(() => {
+    fronts.current.set(cards[firstIndex].image, prepare(first));
+    holo().uniforms.uBack.value = prepare(back);
+    onReady?.();
+  }, [first, back, cards, firstIndex, prepare, onReady]);
+
+  // A new selection spins the card a full turn in the direction of travel once
+  // its art has loaded; the art is swapped while the back faces the viewer.
   useEffect(() => {
     const m = motion.current;
     if (index === m.lastIndex) return;
     const forward = (index - m.lastIndex + cards.length) % cards.length <= cards.length / 2;
-    m.target = forward
-      ? (Math.floor(m.target / TAU + 1e-6) + 1) * TAU
-      : (Math.ceil(m.target / TAU - 1e-6) - 1) * TAU;
-    m.wanted = index;
     m.lastIndex = index;
-  }, [index, cards.length]);
+    const url = cards[index].image;
+    const spin = () => {
+      if (m.lastIndex !== index) return; // a newer pick came in while this one loaded
+      m.target = forward
+        ? (Math.floor(m.target / TAU + 1e-6) + 1) * TAU
+        : (Math.ceil(m.target / TAU - 1e-6) - 1) * TAU;
+      m.wanted = index;
+    };
+    if (fronts.current.has(url)) spin();
+    else
+      new THREE.TextureLoader().loadAsync(url).then((t) => {
+        fronts.current.set(url, prepare(t));
+        spin();
+      });
+  }, [index, cards, prepare]);
 
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    const loaded = fronts.current;
+    return () => {
       geometry.dispose();
       materials.forEach((m) => m.dispose());
       shadowMap.dispose();
-    },
-    [geometry, materials, shadowMap],
-  );
+      loaded.forEach((t) => t.dispose());
+    };
+  }, [geometry, materials, shadowMap]);
 
   useFrame((state, rawDt) => {
     const dt = Math.min(rawDt, 1 / 30);
@@ -171,10 +184,11 @@ function HoloCard({ cards, index, input: inputRef, onReady }: HoloCardProps) {
 
     // Swap the front art only once it has turned away from the camera.
     const yaw = m.rot + m.tiltX;
-    if (m.shown !== m.wanted && (m.shown === -1 || Math.cos(yaw) < 0)) {
-      const card = cards[m.wanted];
-      uniforms.uFront.value = fronts[m.wanted];
-      uniforms.uFoil.value = foilMode(card.foil);
+    const next = cards[m.wanted];
+    const art = fronts.current.get(next.image);
+    if (art && m.shown !== m.wanted && (m.shown === -1 || Math.cos(yaw) < 0)) {
+      uniforms.uFront.value = art;
+      uniforms.uFoil.value = foilMode(next.foil);
       m.shown = m.wanted;
     }
 
@@ -204,11 +218,14 @@ function HoloCard({ cards, index, input: inputRef, onReady }: HoloCardProps) {
   );
 }
 
-type CardSceneProps = HoloCardProps & {
-  active: boolean;
-};
+type CardSceneProps = HoloCardProps &
+  Partial<Framing> & {
+    active: boolean;
+    /** Extra scene dressing rendered alongside the card. */
+    children?: ReactNode;
+  };
 
-export default function CardScene({ active, ...props }: CardSceneProps) {
+export default function CardScene({ active, fill = CARD_FILL, lift = 0, children, ...props }: CardSceneProps) {
   return (
     <Canvas
       flat
@@ -219,8 +236,9 @@ export default function CardScene({ active, ...props }: CardSceneProps) {
       style={{ touchAction: "pan-y" }}
       aria-hidden
     >
-      <FitCamera />
+      <FitCamera fill={fill} lift={lift} />
       <HoloCard {...props} />
+      {children}
     </Canvas>
   );
 }

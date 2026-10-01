@@ -25,10 +25,6 @@ export type Card = {
 export const cards = inventory.cards as Card[];
 export const pricesCheckedOn = inventory.updated;
 
-// The cards that rotate through the hero, in display order.
-const FEATURED_IDS = ["swsh7-215", "base1-4", "sv08-238", "neo1-9", "sv03.5-199"];
-export const featured = FEATURED_IDS.map((id) => cards.find((c) => c.id === id)!);
-
 export const CONDITION_LABEL: Record<Condition, string> = {
   NM: "Near Mint",
   LP: "Lightly Played",
@@ -58,3 +54,4 @@ export function formatDate(iso: string) {
 // Normalized art-box rectangle for vintage holos, in UV space (origin bottom-left):
 // [left, bottom, right, top]. Measured from 600×825 scans of Base–Neo era cards.
 export const ART_WINDOW = [0.1, 0.485, 0.9, 0.886] as const;
+

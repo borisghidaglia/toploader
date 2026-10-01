@@ -1,32 +1,23 @@
 import type { Metadata, Viewport } from "next";
-import { Anybody, Martian_Mono } from "next/font/google";
+import { Tiny5 } from "next/font/google";
+import { pixelArt } from "@/lib/pixel-art";
 import "./globals.css";
 
-const anybody = Anybody({
-  variable: "--font-anybody",
-  subsets: ["latin"],
-  axes: ["wdth"],
-});
-
-const martianMono = Martian_Mono({
-  variable: "--font-martian",
-  subsets: ["latin"],
-  axes: ["wdth"],
-});
+const pixel = Tiny5({ variable: "--font-pixel", subsets: ["latin"], weight: "400" });
 
 export const metadata: Metadata = {
-  title: "Toploader · Pokémon singles",
+  title: "Toploader Mart · Pokémon card shop",
   description: "Raw Pokémon singles from Base Set to Prismatic Evolutions, priced against TCGplayer market.",
 };
 
 export const viewport: Viewport = {
-  themeColor: "#12142b",
+  themeColor: "#343c58",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${anybody.variable} ${martianMono.variable} antialiased`}>
-      <body>{children}</body>
+    <html lang="en" className={pixel.variable}>
+      <body style={pixelArt}>{children}</body>
     </html>
   );
 }
