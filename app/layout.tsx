@@ -1,9 +1,6 @@
 import type { Metadata, Viewport } from "next";
-import { Tiny5 } from "next/font/google";
-import { pixelArt } from "@/lib/pixel-art";
+import { preload } from "react-dom";
 import "./globals.css";
-
-const pixel = Tiny5({ variable: "--font-pixel", subsets: ["latin"], weight: "400" });
 
 export const metadata: Metadata = {
   title: "Toploader Mart · Pokémon card shop",
@@ -11,13 +8,19 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#343c58",
+  // The top of the Mart's back wall.
+  themeColor: "#b4b4a4",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
+  // The game fonts are declared in globals.css; fetch them before the CSS asks.
+  for (const font of ["emerald-normal", "emerald-narrow"]) {
+    preload(`/emerald/fonts/${font}.woff2`, { as: "font", type: "font/woff2", crossOrigin: "anonymous" });
+  }
+
   return (
-    <html lang="en" className={pixel.variable}>
-      <body style={pixelArt}>{children}</body>
+    <html lang="en">
+      <body>{children}</body>
     </html>
   );
 }

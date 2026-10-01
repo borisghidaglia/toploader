@@ -11,7 +11,7 @@ export function TiltToggle() {
     <button
       type="button"
       onClick={requestTilt}
-      className="gba-window gba-focus h-[calc(18*var(--px))] px-2 text-[24px] leading-none outline-none"
+      className="gba-window gba-focus px-[calc(2*var(--px))] outline-none"
     >
       TILT
     </button>

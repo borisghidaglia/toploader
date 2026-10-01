@@ -1,119 +1,129 @@
 @import "tailwindcss";
 
-@theme inline {
-  --color-gba-text: #404048;
-  --color-gba-shadow: #d0d0c8;
-  --color-gba-dim: #707888;
-  --color-gba-label: #5870b8;
+/*
+ * Toploader Mart, drawn with Pokémon Emerald's own graphics: the frames,
+ * tiles, sprites and fonts in public/emerald come out of the pokeemerald
+ * decompilation (scripts/extract-emerald.py). --px is one GBA pixel on
+ * screen, and everything is sized in whole multiples of it so pixels stay
+ * square and crisp.
+ */
+
+@font-face {
+  font-family: "Emerald Normal";
+  src: url("/emerald/fonts/emerald-normal.woff2") format("woff2");
+  font-display: block;
+}
+
+@font-face {
+  font-family: "Emerald Narrow";
+  src: url("/emerald/fonts/emerald-narrow.woff2") format("woff2");
+  font-display: block;
 }
 
 /*
- * Toploader Mart, drawn like a Gen 3 Poké Mart buy screen.
- * Everything sits on a pixel grid: --px is one GBA pixel on screen, and the
- * sprites (lib/pixel-art.ts) arrive as custom properties on <body>.
+ * The fonts draw each letter's shadow from palette slot 0 and the letter
+ * itself in the text color. The game pairs every text color with a shadow.
  */
-
-:root {
-  --px: 3px;
+@font-palette-values --blue {
+  font-family: "Emerald Normal";
+  override-colors: 0 #a4c5f6;
 }
 
-@media (max-width: 359px) {
+@font-palette-values --blue-narrow {
+  font-family: "Emerald Narrow";
+  override-colors: 0 #a4c5f6;
+}
+
+@font-palette-values --popup {
+  font-family: "Emerald Narrow";
+  override-colors: 0 #29315a;
+}
+
+@theme {
+  --font-narrow: "Emerald Narrow", ui-monospace, monospace;
+}
+
+:root {
+  --px: 2px;
+}
+
+@media (min-width: 1280px) and (min-height: 860px) {
   :root {
-    --px: 2px;
+    --px: 3px;
   }
 }
 
 html {
-  background: #343c58;
+  background: #a4eebd;
   -webkit-tap-highlight-color: transparent;
 }
 
+/* One line of text is one 16px glyph cell, as in the game. */
 body {
-  font-family: var(--font-pixel), ui-monospace, monospace;
-  color: var(--color-gba-text);
+  font-family: "Emerald Normal", ui-monospace, monospace;
+  font-size: calc(16 * var(--px));
+  line-height: calc(16 * var(--px));
+  color: #626262;
+  image-rendering: pixelated;
   -webkit-font-smoothing: none;
-  background: #dce4ee var(--floor) 0 0 / calc(16 * var(--px)) calc(16 * var(--px));
+  background: url("/emerald/floor.png") 0 0 / calc(16 * var(--px)) calc(16 * var(--px));
 }
 
 ::selection {
-  background: #a8c8f8;
+  background: #a4c5f6;
 }
 
-/* Windows: a nine-slice frame, dark text with the classic pale drop shadow. */
+/* Labels, in the blue the game uses for them. */
+.gba-blue {
+  color: #3152cd;
+  font-palette: --blue;
+}
+
+.font-narrow .gba-blue,
+.gba-blue.font-narrow {
+  font-palette: --blue-narrow;
+}
+
+.gba-focus:focus-visible {
+  outline: var(--px) dashed #3152cd;
+  outline-offset: calc(-3 * var(--px));
+}
+
+/* --- Windows: nine-slices of the game's frames ------------------------------ */
+
+/* The standard menu frame. */
 .gba-window {
-  border: calc(3 * var(--px)) solid transparent;
-  border-image: var(--frame) 3 fill / calc(3 * var(--px)) stretch;
-  text-shadow: var(--px) var(--px) 0 var(--color-gba-shadow);
+  border: calc(8 * var(--px)) solid transparent;
+  border-image: url("/emerald/window.png") 8 fill / calc(8 * var(--px)) stretch;
 }
 
-.gba-window[data-variant="sign"] {
-  border-image-source: var(--frame-sign);
-  color: #583818;
-  text-shadow: var(--px) var(--px) 0 #e0c898;
+/* The overworld message box, two tiles wide on the sides. */
+.gba-message {
+  border-style: solid;
+  border-color: transparent;
+  border-width: calc(8 * var(--px)) calc(16 * var(--px));
+  border-image: url("/emerald/message-box.png") 8 16 fill / calc(8 * var(--px)) calc(16 * var(--px)) stretch;
 }
 
-.gba-sprite {
-  flex: none;
-  background: var(--sprite) center / 100% 100% no-repeat;
+/* The buy menu's item list. */
+.gba-list-window {
+  border: calc(8 * var(--px)) solid transparent;
+  border-image: url("/emerald/list-window.png") 8 fill / calc(8 * var(--px)) stretch;
 }
 
-.gba-cursor {
-  --sprite: var(--cursor);
-  width: calc(4 * var(--px));
-  height: calc(7 * var(--px));
-  filter: drop-shadow(var(--px) var(--px) 0 var(--color-gba-shadow));
+/* Every other row is striped, except the cursor's column. */
+.gba-row:nth-child(odd) .gba-row-body {
+  background: #ffe6a4;
 }
 
-.gba-next {
-  --sprite: var(--next);
-  width: calc(7 * var(--px));
-  height: calc(4 * var(--px));
-  animation: gba-bob 0.6s steps(1) infinite;
+/* The buy menu's description box. */
+.gba-box {
+  border-style: solid;
+  border-color: transparent;
+  border-width: calc(4 * var(--px)) calc(8 * var(--px)) calc(3 * var(--px));
+  border-image: url("/emerald/box.png") 4 8 3 fill / calc(4 * var(--px)) calc(8 * var(--px)) calc(3 * var(--px)) stretch;
 }
 
-@keyframes gba-bob {
-  50% {
-    transform: translateY(var(--px));
-  }
-}
-
-/* The shop floor's back wall and stock, behind everything. */
-.mart-wall {
-  height: calc(40 * var(--px));
-  background: var(--wall) 0 0 / calc(16 * var(--px)) 100% repeat-x;
-}
-
-.mart-shelves {
-  top: calc(8 * var(--px));
-  height: calc(56 * var(--px));
-  background: var(--shelf) center top / calc(40 * var(--px)) 100% repeat-x;
-}
-
-.mart-plant {
-  --sprite: var(--plant);
-  top: calc(30 * var(--px));
-  width: calc(20 * var(--px));
-  height: calc(30 * var(--px));
-}
-
-.mart-rug {
-  --sprite: var(--rug);
-  width: calc(96 * var(--px));
-  height: calc(18 * var(--px));
-}
-
-/* The location sign drops in when you arrive, like entering a new map. */
-.mart-sign {
-  animation: mart-sign-in 0.45s steps(5) 0.15s both;
-}
-
-@keyframes mart-sign-in {
-  from {
-    transform: translateY(calc(-100% - 12 * var(--px)));
-  }
-}
-
-/* Item list */
 .gba-list {
   scrollbar-width: none;
 }
@@ -122,48 +132,180 @@ body {
   display: none;
 }
 
-.gba-option .gba-cursor {
+.gba-row .gba-cursor {
   visibility: hidden;
 }
 
-.gba-option[aria-selected="true"] .gba-cursor {
+.gba-row[aria-selected="true"] .gba-cursor {
   visibility: visible;
 }
 
 @media (hover: hover) {
-  .gba-option:hover .gba-cursor {
+  .gba-row:hover .gba-cursor {
     visibility: visible;
-    opacity: 0.3;
+    opacity: 0.4;
   }
-  .gba-option[aria-selected="true"]:hover .gba-cursor {
+  .gba-row[aria-selected="true"]:hover .gba-cursor {
     opacity: 1;
   }
 }
 
-.gba-scroll {
+/* --- Sprites ----------------------------------------------------------------- */
+
+.gba-sprite {
+  flex: none;
+  background: var(--sprite) 0 0 / 100% 100% no-repeat;
+}
+
+/* The ▼ waiting at the end of a message steps up 0, 1, 2, 1px, nine frames each (text.c). */
+.gba-next {
+  --sprite: url("/emerald/down-arrow.png");
   width: calc(7 * var(--px));
-  height: calc(4 * var(--px));
-  animation: gba-bob 0.6s steps(1) infinite;
+  height: calc(7 * var(--px));
+  animation: gba-next 600ms steps(1) infinite;
 }
 
-.gba-focus:focus-visible {
-  outline: var(--px) dashed var(--color-gba-label);
-  outline-offset: calc(-6 * var(--px));
+@keyframes gba-next {
+  25% {
+    translate: 0 calc(-1 * var(--px));
+  }
+  50% {
+    translate: 0 calc(-2 * var(--px));
+  }
+  75% {
+    translate: 0 calc(-1 * var(--px));
+  }
 }
 
-/* Type badges, like the summary screen's. */
-.gba-type {
-  border: var(--px) solid color-mix(in srgb, var(--type) 55%, #000);
-  border-radius: calc(2 * var(--px));
-  background: var(--type);
+/*
+ * Scroll arrows sway 2px on the sine table, a 32-frame cycle (list_menu.c),
+ * each pair toward the list and back: --sway is 1 or -1 for which way.
+ */
+.gba-scroll {
+  --sprite: url("/emerald/scroll-up.png");
+  --sway: 1;
+  width: calc(14 * var(--px));
+  height: calc(9 * var(--px));
+  animation: gba-sway-y 533ms steps(1) infinite;
+}
+
+.gba-scroll[data-dir="down"] {
+  --sway: -1;
+  scale: 1 -1;
+}
+
+.gba-pocket-arrow {
+  --sprite: url("/emerald/scroll-left.png");
+  --sway: 1;
+  width: calc(9 * var(--px));
+  height: calc(14 * var(--px));
+  animation: gba-sway-x 533ms steps(1) infinite;
+}
+
+.gba-pocket-arrow[data-dir="right"] {
+  --sway: -1;
+  scale: -1 1;
+}
+
+@keyframes gba-sway-y {
+  9.375% { translate: 0 calc(var(--sway) * var(--px)); }
+  25% { translate: 0 calc(var(--sway) * 2 * var(--px)); }
+  28.125% { translate: 0 calc(var(--sway) * var(--px)); }
+  43.75% { translate: 0 0; }
+  59.375% { translate: 0 calc(var(--sway) * -1 * var(--px)); }
+  75% { translate: 0 calc(var(--sway) * -2 * var(--px)); }
+  78.125% { translate: 0 calc(var(--sway) * -1 * var(--px)); }
+  93.75% { translate: 0 0; }
+}
+
+@keyframes gba-sway-x {
+  9.375% { translate: calc(var(--sway) * var(--px)) 0; }
+  25% { translate: calc(var(--sway) * 2 * var(--px)) 0; }
+  28.125% { translate: calc(var(--sway) * var(--px)) 0; }
+  43.75% { translate: 0 0; }
+  59.375% { translate: calc(var(--sway) * -1 * var(--px)) 0; }
+  75% { translate: calc(var(--sway) * -2 * var(--px)) 0; }
+  78.125% { translate: calc(var(--sway) * -1 * var(--px)) 0; }
+  93.75% { translate: 0 0; }
+}
+
+/* --- The shop floor ------------------------------------------------------------ */
+
+.mart {
+  --list-width: round(down, min(36vw, calc(176 * var(--px))), var(--px));
+}
+
+/* The back wall repeats on from map column 4; columns 0-3 are the counter. */
+.mart-wall {
+  height: calc(48 * var(--px));
+  background: url("/emerald/wall.png") calc(64 * var(--px)) 0 / calc(128 * var(--px)) 100% repeat-x;
+}
+
+.mart-counter {
+  --sprite: url("/emerald/counter.png");
+  width: calc(64 * var(--px));
+  height: calc(96 * var(--px));
+}
+
+/* Stands against the wall, on the floor's tile grid: at the right edge on phones, a tile past the counter on desktop. */
+.mart-shelf {
+  --sprite: url("/emerald/shelf.png");
+  top: calc(32 * var(--px));
+  left: round(down, calc(100% - 32 * var(--px)), calc(16 * var(--px)));
+  width: calc(32 * var(--px));
+  height: calc(96 * var(--px));
+}
+
+@media (min-width: 1024px) {
+  .mart-shelf {
+    left: calc(80 * var(--px));
+  }
+}
+
+/*
+ * The wooden sign a town's name arrives on (map_name_popup.c): after half a
+ * second it slides down 2px a frame, holds for two seconds and slides away.
+ */
+.mart-popup {
+  width: calc(96 * var(--px));
+  height: calc(40 * var(--px));
+  padding: calc(11 * var(--px)) calc(8 * var(--px)) 0;
+  background: url("/emerald/popup.png") 0 0 / 100% 100%;
   color: #fff;
-  text-shadow: var(--px) var(--px) 0 color-mix(in srgb, var(--type) 50%, #000);
+  font-palette: --popup;
+  translate: 0 -100%;
+  animation: mart-popup 2680ms 500ms;
+}
+
+@keyframes mart-popup {
+  0% {
+    translate: 0 -100%;
+    animation-timing-function: steps(20);
+  }
+  12.5%,
+  87.5% {
+    translate: 0 0;
+    animation-timing-function: steps(20);
+  }
+  100% {
+    translate: 0 -100%;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .mart-sign,
   .gba-next,
-  .gba-scroll {
+  .gba-scroll,
+  .gba-pocket-arrow {
     animation: none;
+  }
+  .mart-popup {
+    animation-name: mart-popup-still;
+  }
+}
+
+@keyframes mart-popup-still {
+  from,
+  to {
+    translate: 0 0;
   }
 }

@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { SPEAKER_OFF, SPEAKER_ON } from "@/lib/pixel-art";
 import { startMusic, stopMusic } from "@/lib/sound";
-import { cn } from "@/lib/utils";
 
 export function SoundToggle() {
   const [on, setOn] = useState(false);
@@ -24,17 +24,15 @@ export function SoundToggle() {
       type="button"
       onClick={toggle}
       aria-pressed={on}
-      aria-label="Sound"
+      aria-label="Music"
       title="Music: “Shop” from Pokémon Emerald"
-      className="gba-window gba-focus flex h-[calc(18*var(--px))] items-center gap-2 px-2 outline-none"
+      className="gba-window gba-focus flex items-center gap-[calc(4*var(--px))] px-[calc(2*var(--px))] outline-none"
     >
       <span
-        className={cn(
-          "gba-sprite h-[calc(9*var(--px))] w-[calc(11*var(--px))]",
-          on ? "[--sprite:var(--speaker-on)]" : "[--sprite:var(--speaker-off)]",
-        )}
+        className="gba-sprite h-[calc(10*var(--px))] w-[calc(12*var(--px))]"
+        style={{ "--sprite": on ? SPEAKER_ON : SPEAKER_OFF } as React.CSSProperties}
       />
-      <span className="hidden w-[2.2em] text-left text-[24px] leading-none lg:inline">{on ? "ON" : "OFF"}</span>
+      <span className="hidden w-[calc(18*var(--px))] text-left lg:inline">{on ? "ON" : "OFF"}</span>
     </button>
   );
 }

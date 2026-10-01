@@ -13,11 +13,11 @@ export const POCKETS: { id: Pocket; label: string }[] = [
   { id: "modern", label: "MODERN" },
 ];
 
-export const SORTS: { id: Sort; label: string; compare: (a: Card, b: Card) => number }[] = [
-  { id: "price-desc", label: "$$$ FIRST", compare: (a, b) => b.price - a.price },
-  { id: "price-asc", label: "$ FIRST", compare: (a, b) => a.price - b.price },
-  { id: "newest", label: "NEWEST", compare: (a, b) => b.year - a.year || b.price - a.price },
-  { id: "oldest", label: "OLDEST", compare: (a, b) => a.year - b.year || b.price - a.price },
+export const SORTS: { id: Sort; label: string; spoken: string; compare: (a: Card, b: Card) => number }[] = [
+  { id: "price-desc", label: "PRICE↓", spoken: "price, high to low", compare: (a, b) => b.price - a.price },
+  { id: "price-asc", label: "PRICE↑", spoken: "price, low to high", compare: (a, b) => a.price - b.price },
+  { id: "newest", label: "NEWEST", spoken: "newest first", compare: (a, b) => b.year - a.year || b.price - a.price },
+  { id: "oldest", label: "OLDEST", spoken: "oldest first", compare: (a, b) => a.year - b.year || b.price - a.price },
 ];
 
 export function shelve(cards: Card[], pocket: Pocket, sort: Sort) {
@@ -39,14 +39,14 @@ type ItemListProps = {
   className?: string;
 };
 
-/** The buy menu: a pocket switcher, a sort toggle and the cursor list of cards with prices. */
+/** The buy menu: a pocket switcher, a sort toggle and the striped list of cards with prices. */
 export function ItemList({ cards, selectedId, onSelect, pocket, onPocket, sort, onSort, checkedOn, className }: ItemListProps) {
   const scroller = useRef<HTMLDivElement>(null);
   const [more, setMore] = useState({ up: false, down: false });
-  const pocketIndex = POCKETS.findIndex((p) => p.id === pocket);
-  const sortLabel = SORTS.find((s) => s.id === sort)!.label;
+  const pocketLabel = POCKETS.find((p) => p.id === pocket)!.label;
+  const order = SORTS.find((s) => s.id === sort)!;
 
-  // Show the bouncing arrows only when there's more list above or below.
+  // Show the swaying arrows only when there's more list above or below.
   useEffect(() => {
     const el = scroller.current!;
     const measure = () => {
@@ -65,45 +65,32 @@ export function ItemList({ cards, selectedId, onSelect, pocket, onPocket, sort, 
   }, []);
 
   return (
-    <div className={cn("flex min-h-0 flex-col gap-[calc(2*var(--px))]", className)}>
-      <div className="flex gap-[calc(2*var(--px))]">
+    <div className={cn("flex min-h-0 flex-col gap-[calc(4*var(--px))]", className)}>
+      <div className="flex gap-[calc(4*var(--px))]">
         <div className="gba-window flex flex-1 items-center justify-between">
           <PocketArrow direction="left" onClick={() => onPocket(-1)} />
-          <div className="flex flex-col items-center">
-            <p className="text-[24px] leading-[28px]" aria-live="polite">
-              {POCKETS[pocketIndex].label}
-            </p>
-            <div className="flex gap-[calc(2*var(--px))] pb-1" aria-hidden>
-              {POCKETS.map((p, i) => (
-                <span
-                  key={p.id}
-                  className={cn("size-[calc(2*var(--px))]", i === pocketIndex ? "bg-gba-label" : "bg-[#c8d4ec]")}
-                />
-              ))}
-            </div>
-          </div>
+          <p aria-live="polite">{pocketLabel}</p>
           <PocketArrow direction="right" onClick={() => onPocket(1)} />
         </div>
         <button
           type="button"
           onClick={onSort}
-          aria-label={`Sort: ${sortLabel.toLowerCase()}. Change order`}
-          className="gba-window gba-focus flex flex-col items-start justify-center px-2 outline-none"
+          aria-label={`Sort: ${order.spoken}. Change order`}
+          className="gba-window gba-focus px-[calc(2*var(--px))] whitespace-nowrap outline-none"
         >
-          <span className="text-[16px] leading-[16px] text-gba-label">SORT</span>
-          <span className="text-[24px] leading-[28px] whitespace-nowrap">{sortLabel}</span>
+          {order.label}
         </button>
       </div>
 
-      <div className="gba-window relative flex min-h-0 flex-1 flex-col">
+      <div className="gba-list-window relative flex min-h-0 flex-1 flex-col">
         <div ref={scroller} className="gba-list min-h-0 flex-1 overflow-y-auto overscroll-contain">
-          <div>
+          <div className="font-narrow">
             <div
               role="listbox"
               tabIndex={0}
               aria-label="Cards"
               aria-activedescendant={optionId(selectedId)}
-              className="gba-focus py-1.5 outline-none"
+              className="gba-focus pt-[calc(8*var(--px))] outline-none"
             >
               {cards.map((card) => (
                 <div
@@ -112,42 +99,44 @@ export function ItemList({ cards, selectedId, onSelect, pocket, onPocket, sort, 
                   role="option"
                   aria-selected={card.id === selectedId}
                   onClick={() => onSelect(card)}
-                  className="gba-option flex h-10 cursor-pointer items-center gap-2 px-2.5 text-[24px] lg:px-3"
+                  className="gba-row flex cursor-pointer"
                 >
-                  <span className="gba-sprite gba-cursor" />
-                  <span className="min-w-0 flex-1 truncate">{card.name.toUpperCase()}</span>
-                  {card.condition === "LP" && (
-                    <span className="text-[16px] text-gba-dim" title="Lightly played">
-                      LP
-                    </span>
-                  )}
-                  <span className="tabular-nums">{formatPrice(card.price)}</span>
+                  <span aria-hidden className="gba-cursor w-[calc(8*var(--px))] flex-none">
+                    ▶
+                  </span>
+                  <span className="gba-row-body flex min-w-0 flex-1 gap-[calc(4*var(--px))] whitespace-nowrap">
+                    <span className="min-w-0 flex-1 truncate">{card.name.toUpperCase()}</span>
+                    {card.condition === "LP" && (
+                      <abbr title="Lightly played" className="gba-blue no-underline">
+                        LP
+                      </abbr>
+                    )}
+                    <span>{formatPrice(card.price)}</span>
+                  </span>
                 </div>
               ))}
             </div>
-            <div className="space-y-2 px-3 pt-3 pb-4 text-[16px] leading-[20px] text-gba-dim [text-shadow:none] lg:px-4">
+            <div className="space-y-[calc(8*var(--px))] pt-[calc(16*var(--px))] pb-[calc(8*var(--px))] pl-[calc(8*var(--px))]">
               <p>
                 Prices in USD, following TCGplayer market on {checkedOn}. LP means lightly played, marked down
                 20%.
               </p>
               <p>
-                Card images from TCGdex. Music: &ldquo;Shop&rdquo; from Pokémon Emerald. Pokémon, the card art and
-                the music &copy; Nintendo, Creatures and GAME FREAK. Toploader is a fan project and isn&apos;t
-                affiliated with them.
+                Card images from TCGdex. Sprites, fonts and music from Pokémon Emerald, by way of the
+                pret/pokeemerald decompilation. Pokémon and its art belong to Nintendo, Creatures and GAME FREAK.
+                Toploader is a fan project and isn&apos;t affiliated with them.
               </p>
             </div>
           </div>
         </div>
         {more.up && (
-          <span
-            aria-hidden
-            className="gba-sprite gba-scroll pointer-events-none absolute -top-[calc(5*var(--px))] left-1/2 -translate-x-1/2 [--sprite:var(--scroll-up)]"
-          />
+          <span aria-hidden className="gba-sprite gba-scroll pointer-events-none absolute top-0 left-[calc(50%-7*var(--px))]" />
         )}
         {more.down && (
           <span
             aria-hidden
-            className="gba-sprite gba-scroll pointer-events-none absolute -bottom-[calc(5*var(--px))] left-1/2 -translate-x-1/2 [--sprite:var(--scroll-down)]"
+            data-dir="down"
+            className="gba-sprite gba-scroll pointer-events-none absolute bottom-0 left-[calc(50%-7*var(--px))]"
           />
         )}
       </div>
@@ -161,14 +150,9 @@ function PocketArrow({ direction, onClick }: { direction: "left" | "right"; onCl
       type="button"
       onClick={onClick}
       aria-label={direction === "left" ? "Previous section" : "Next section"}
-      className="gba-focus grid h-12 w-10 place-items-center outline-none"
+      className="gba-focus grid h-[calc(16*var(--px))] w-[calc(16*var(--px))] place-items-center outline-none"
     >
-      <span
-        className={cn(
-          "gba-sprite h-[calc(7*var(--px))] w-[calc(4*var(--px))]",
-          direction === "left" ? "[--sprite:var(--pocket-left)]" : "[--sprite:var(--pocket-right)]",
-        )}
-      />
+      <span data-dir={direction} className="gba-sprite gba-pocket-arrow" />
     </button>
   );
 }

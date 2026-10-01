@@ -16,8 +16,9 @@ function showOption(id: string) {
 }
 
 /**
- * Toploader Mart: the shop as a Gen 3 buy screen. The shop floor fills the
- * screen, windows float over it, and the card you're on is brought out in 3D.
+ * Toploader Mart: the shop as Emerald's buy screen. The Mart's floor fills the
+ * screen with the clerk at the counter, the game's windows sit on top, and the
+ * card you're on is brought out in 3D.
  */
 export function Mart({ cards, checkedOn }: { cards: Card[]; checkedOn: string }) {
   const [pocket, setPocket] = useState<Pocket>("all");
@@ -88,43 +89,36 @@ export function Mart({ cards, checkedOn }: { cards: Card[]; checkedOn: string })
   }, []);
 
   return (
-    <div className="relative h-dvh overflow-hidden">
-      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0">
+    <div className="mart relative h-dvh overflow-hidden">
+      <div aria-hidden className="pointer-events-none absolute inset-0">
         <div className="mart-wall" />
-        <div className="mart-shelves absolute inset-x-0" />
-        <div className="gba-sprite mart-plant absolute left-[calc(2*var(--px))]" />
-        {/* On desktop the list covers the right wall, so the plant moves in front of it. */}
-        <div className="gba-sprite mart-plant absolute right-[calc(2*var(--px))] lg:right-[calc(min(36vw,520px)+8*var(--px))]" />
+        <div className="gba-sprite mart-counter absolute top-0 left-0" />
+        <div className="gba-sprite mart-shelf absolute" />
       </div>
 
-      <div className="relative grid h-full grid-rows-[auto_minmax(0,1.2fr)_auto_minmax(0,1fr)] gap-[calc(2*var(--px))] p-[calc(2*var(--px))] lg:grid-cols-[minmax(0,1fr)_min(36vw,520px)] lg:grid-rows-[auto_minmax(0,1fr)_auto] lg:gap-[calc(4*var(--px))] lg:p-[calc(4*var(--px))]">
-        <header className="flex items-start justify-between gap-2 lg:col-start-1">
-          <p className="gba-window mart-sign px-3 py-1 text-[24px] leading-[32px]" data-variant="sign">
-            TOPLOADER MART
-          </p>
-          <SoundToggle />
-        </header>
-
+      <div className="relative grid h-full grid-rows-[minmax(0,1.2fr)_auto_minmax(0,1fr)] gap-[calc(4*var(--px))] p-[calc(4*var(--px))] lg:grid-cols-[minmax(0,1fr)_var(--list-width)] lg:grid-rows-[minmax(0,1fr)_auto]">
         <section
           aria-label={`Showing ${selected.name}`}
-          className="relative min-h-0 lg:col-start-1 lg:grid lg:grid-cols-[320px_minmax(0,1fr)] lg:items-center lg:gap-[calc(4*var(--px))]"
+          className="relative min-h-0 lg:col-start-1 lg:grid lg:grid-cols-[calc(136*var(--px))_minmax(0,1fr)] lg:gap-[calc(4*var(--px))]"
         >
-          <CardData card={selected} className="hidden lg:block" />
+          <CardData card={selected} className="hidden self-end lg:block" />
           <div className="relative h-full">
-            {/* Sits just under the card's bottom edge: (1 + fill) / 2 - lift of the stage height. */}
-            <div aria-hidden className="gba-sprite mart-rug absolute top-[84%] left-1/2 -translate-x-1/2 -translate-y-1/2" />
             <CardStage
               cards={cards}
               index={cards.indexOf(selected)}
               priority
               fill={0.78}
-              lift={0.07}
+              lift={0.02}
               sizes="(min-width: 1024px) 420px, 50vw"
-              className="absolute inset-0"
+              // The card is a photo, not pixel art: scale it smoothly.
+              className="absolute inset-0 [image-rendering:auto]"
             />
             <div className="absolute right-0 bottom-0">
               <TiltToggle />
             </div>
+          </div>
+          <div className="absolute top-0 right-0">
+            <SoundToggle />
           </div>
         </section>
 
@@ -143,9 +137,14 @@ export function Mart({ cards, checkedOn }: { cards: Card[]; checkedOn: string })
           sort={sort}
           onSort={cycleSort}
           checkedOn={checkedOn}
-          className="lg:col-start-2 lg:row-span-3 lg:row-start-1"
+          className="lg:col-start-2 lg:row-span-2 lg:row-start-1"
         />
       </div>
+
+      {/* The shop's name arrives like a town's, on the sign that slides in and away. */}
+      <p aria-hidden className="mart-popup pointer-events-none absolute top-0 left-0 text-center font-narrow">
+        TOPLOADER MART
+      </p>
     </div>
   );
 }

@@ -5,11 +5,12 @@ import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { blip } from "@/lib/sound";
 import { cn } from "@/lib/utils";
 
-const CHARS_PER_SECOND = 50;
+// About a letter a frame, like the game's FAST text speed.
+const CHARS_PER_SECOND = 60;
 
 /**
- * The clerk's message box. Text types out one character at a time; a tap
- * finishes the line, or turns to the next page when there is one.
+ * The clerk's message box. Text types out one letter at a time; a tap
+ * finishes the page, or turns to the next one when there is one.
  * Mount it with a key per message so it starts from the top.
  */
 export function DialogBox({ pages, className }: { pages: string[]; className?: string }) {
@@ -38,11 +39,18 @@ export function DialogBox({ pages, className }: { pages: string[]; className?: s
   }
 
   return (
-    <div className={cn("gba-window relative cursor-default select-none", className)} onClick={advance}>
-      <p aria-hidden className="min-h-[96px] px-3 py-1.5 text-[24px] leading-[32px] lg:min-h-[64px] lg:px-4">
+    <div className={cn("gba-message relative cursor-default select-none", className)} onClick={advance}>
+      {/* Two lines, as in game; three on phones, which are narrower than a GBA. */}
+      <p aria-hidden className="relative top-[var(--px)] min-h-[calc(48*var(--px))] lg:min-h-[calc(32*var(--px))]">
         {text.slice(0, shown)}
         {/* The rest is laid out but invisible, so words never jump lines as they type. */}
         <span className="invisible">{text.slice(shown)}</span>
+        {/* The ▼ waits right after the last letter, in an 8×16 cell like the font's. */}
+        <span className="relative inline-block h-[calc(16*var(--px))] w-[calc(8*var(--px))] align-top">
+          {done && more && (
+            <span className="gba-sprite gba-next absolute top-[calc(5*var(--px))] left-[var(--px)]" />
+          )}
+        </span>
       </p>
       <p className="sr-only" aria-live="polite">
         {text}
@@ -55,10 +63,8 @@ export function DialogBox({ pages, className }: { pages: string[]; className?: s
             e.stopPropagation();
             advance();
           }}
-          className="gba-focus absolute right-1 bottom-0 grid size-11 place-items-center outline-none"
-        >
-          <span className="gba-sprite gba-next" />
-        </button>
+          className="gba-focus absolute -inset-y-[calc(8*var(--px))] -inset-x-[calc(16*var(--px))] outline-none"
+        />
       )}
     </div>
   );

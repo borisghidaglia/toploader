@@ -2,63 +2,69 @@ import { CONDITION_LABEL, formatMarket, formatPrice, type Card } from "@/lib/car
 import { cn } from "@/lib/utils";
 import { artistName } from "./clerk";
 
-const TYPE_COLORS: Record<string, string> = {
-  Grass: "#78c850",
-  Fire: "#f08030",
-  Water: "#6890f0",
-  Lightning: "#e8b820",
-  Psychic: "#f85888",
-  Fighting: "#c03028",
-  Darkness: "#705848",
-  Metal: "#a0a0c0",
-  Fairy: "#ee99ac",
-  Dragon: "#7038f8",
-  Colorless: "#a8a878",
-  Trainer: "#8890a8",
+// The TCG's energy types, as the game's type icons. Trainers and Fairy have none.
+const TYPE_ICONS: Record<string, string> = {
+  Grass: "grass",
+  Fire: "fire",
+  Water: "water",
+  Lightning: "electric",
+  Psychic: "psychic",
+  Fighting: "fight",
+  Darkness: "dark",
+  Metal: "steel",
+  Dragon: "dragon",
+  Colorless: "normal",
 };
 
-/** The selected card's details, laid out like a summary screen. */
+/** The selected card's details, in the buy menu's description box. */
 export function CardData({ card, className }: { card: Card; className?: string }) {
   const artist = artistName(card);
+  const icon = TYPE_ICONS[card.type];
+
   return (
-    <div className={cn("gba-window px-3 py-2", className)}>
-      <p className="text-[16px] leading-[20px] text-gba-label">No. {card.number}</p>
-      <p className="text-[24px] leading-[28px]">{card.name.toUpperCase()}</p>
-      <div className="mt-2 flex items-center gap-3">
-        <span
-          className="gba-type px-1.5 text-[16px] leading-[20px]"
-          style={{ "--type": TYPE_COLORS[card.type] ?? TYPE_COLORS.Colorless } as React.CSSProperties}
-        >
-          {card.type.toUpperCase()}
-        </span>
-        {card.hp && (
-          <span className="text-[16px]">
-            HP <span className="text-[24px]">{card.hp}</span>
-          </span>
+    <div className={cn("gba-box", className)}>
+      <p className="truncate">{card.name.toUpperCase()}</p>
+      <div className="flex items-center gap-[calc(4*var(--px))] font-narrow">
+        {icon ? (
+          <span
+            role="img"
+            aria-label={`${card.type} type`}
+            className="gba-sprite h-[calc(14*var(--px))] w-[calc(32*var(--px))]"
+            style={{ "--sprite": `url(/emerald/types/${icon}.png)` } as React.CSSProperties}
+          />
+        ) : (
+          <span className="gba-blue">{card.type.toUpperCase()}</span>
         )}
+        {card.hp && <span>HP{card.hp}</span>}
+        <span className="ml-auto">No.{card.number}</span>
       </div>
-
-      <div className="mt-3 flex items-baseline justify-between gap-3 border-y-[length:var(--px)] border-dashed border-[#c8d4ec] py-2">
-        <span className="text-[16px] text-gba-label">PRICE</span>
-        <span className="text-[32px] leading-[36px]">{formatPrice(card.price)}</span>
-      </div>
-
-      <dl className="mt-2 space-y-1.5 text-[16px] leading-[20px]">
-        <Fact label="MARKET" value={formatMarket(card.market)} />
-        <Fact label="RARITY" value={card.rarity} />
-        <Fact label="COND." value={CONDITION_LABEL[card.condition]} />
-        <Fact label="SET" value={`${card.set}, ${card.year}`} />
-        {artist && <Fact label="ILLUS." value={artist} />}
+      <dl>
+        <div className="flex justify-between">
+          <dt className="gba-blue">PRICE</dt>
+          <dd>{formatPrice(card.price)}</dd>
+        </div>
+        <div className="flex justify-between font-narrow">
+          <dt className="gba-blue">MARKET</dt>
+          <dd>{formatMarket(card.market)}</dd>
+        </div>
+        {/* The rest reads plainly without labels, so they're only spoken. */}
+        <div className="font-narrow">
+          <dt className="sr-only">Rarity</dt>
+          <dd className="truncate">{card.rarity}</dd>
+          <dt className="sr-only">Set</dt>
+          <dd className="truncate">
+            {card.set}, {card.year}
+          </dd>
+          <dt className="sr-only">Condition</dt>
+          <dd>{CONDITION_LABEL[card.condition]}</dd>
+          {artist && (
+            <>
+              <dt className="sr-only">Illustrator</dt>
+              <dd className="truncate">Illus. {artist}</dd>
+            </>
+          )}
+        </div>
       </dl>
-    </div>
-  );
-}
-
-function Fact({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex gap-3">
-      <dt className="w-[64px] flex-none text-gba-label">{label}</dt>
-      <dd className="min-w-0">{value}</dd>
     </div>
   );
 }
