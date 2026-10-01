@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import { preload } from "react-dom";
 import "./globals.css";
 
@@ -20,6 +21,15 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
 
   return (
     <html lang="en">
+      <head>
+        {process.env.NODE_ENV === "development" && (
+          <Script
+            src="//unpkg.com/react-grab/dist/index.global.js"
+            crossOrigin="anonymous"
+            strategy="beforeInteractive"
+          />
+        )}
+      </head>
       <body>{children}</body>
     </html>
   );

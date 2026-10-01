@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
-import { blip } from "@/lib/sound";
+import { playSelectSound } from "@/lib/sound";
 import { cn } from "@/lib/utils";
 
 // About a letter a frame, like the game's FAST text speed.
@@ -34,7 +34,7 @@ export function DialogBox({ pages, className }: { pages: string[]; className?: s
     } else if (more) {
       setPage(page + 1);
       setTyped(0);
-      blip("select");
+      playSelectSound();
     }
   }
 

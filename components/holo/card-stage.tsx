@@ -13,7 +13,7 @@ import {
 } from "react";
 import type { Card } from "@/lib/cards";
 import { cn } from "@/lib/utils";
-import { CARD_FILL, createStageInput } from "./stage-input";
+import { CARD_ASPECT, CARD_FILL, CARD_MAX_WIDTH, createStageInput } from "./stage-input";
 
 const CardScene = dynamic(() => import("./card-scene"), { ssr: false });
 
@@ -34,8 +34,8 @@ type CardStageProps = {
 };
 
 /**
- * A 3D card you can turn with a finger, the mouse, the arrow keys or by tilting
- * the phone. Shows the flat scan until WebGL is ready, and if it never is.
+ * A 3D card you can turn either way with a finger or the mouse, or over with the
+ * arrow keys. Shows the flat scan until WebGL is ready, and if it never is.
  */
 export function CardStage({
   cards,
@@ -52,7 +52,7 @@ export function CardStage({
   const input = useRef(createStageInput());
   const [ready, setReady] = useState(false);
   const [visible, setVisible] = useState(false);
-  const drag = useRef<{ id: number; x: number } | null>(null);
+  const drag = useRef<{ id: number; x: number; y: number } | null>(null);
   const card = cards[index];
 
   useEffect(() => {
@@ -73,26 +73,20 @@ export function CardStage({
 
   function onPointerDown(e: PointerEvent<HTMLDivElement>) {
     if (e.button !== 0) return;
-    drag.current = { id: e.pointerId, x: e.clientX };
+    drag.current = { id: e.pointerId, x: e.clientX, y: e.clientY };
     input.current.dragging = true;
   }
 
   function onPointerMove(e: PointerEvent<HTMLDivElement>) {
-    if (e.pointerType === "mouse") {
-      const r = e.currentTarget.getBoundingClientRect();
-      input.current.hover = {
-        x: ((e.clientX - r.left) / r.width) * 2 - 1,
-        y: ((e.clientY - r.top) / r.height) * 2 - 1,
-      };
-    }
     const d = drag.current;
     if (d && d.id === e.pointerId) {
-      // Capture only once the gesture is clearly horizontal, so vertical swipes still scroll.
       if (!e.currentTarget.hasPointerCapture(e.pointerId)) {
         e.currentTarget.setPointerCapture(e.pointerId);
       }
       input.current.dragDx += e.clientX - d.x;
+      input.current.dragDy += e.clientY - d.y;
       d.x = e.clientX;
+      d.y = e.clientY;
     }
   }
 
@@ -113,10 +107,10 @@ export function CardStage({
     <div
       ref={ref}
       role="img"
-      aria-label={`${card.name}, ${card.set} ${card.number}. Drag, tilt or use arrow keys to turn it over.`}
+      aria-label={`${card.name}, ${card.set} ${card.number}. Drag to turn it, or use the arrow keys to turn it over.`}
       tabIndex={0}
       className={cn(
-        "relative cursor-grab touch-pan-y select-none outline-none active:cursor-grabbing",
+        "relative cursor-grab touch-none select-none outline-none active:cursor-grabbing",
         "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-transparent",
         className,
       )}
@@ -124,20 +118,21 @@ export function CardStage({
       onPointerMove={onPointerMove}
       onPointerUp={endDrag}
       onPointerCancel={endDrag}
-      onPointerLeave={(e) => {
-        if (e.pointerType === "mouse") input.current.hover = null;
-      }}
       onKeyDown={onKeyDown}
     >
       <div
         className={cn(
-          "pointer-events-none absolute inset-0 transition-opacity duration-500",
+          "pointer-events-none absolute inset-0 transition-opacity duration-500 [container-type:size]",
           ready && "opacity-0",
         )}
       >
+        {/* Sized and placed like the 3D card at rest (see FitCamera). */}
         <div
-          className="absolute left-1/2 aspect-[63/88] max-w-[86%] -translate-x-1/2"
-          style={{ height: `${fill * 100}%`, top: `${((1 - fill) / 2 - lift) * 100}%` }}
+          className="absolute top-1/2 left-1/2 aspect-[63/88] -translate-x-1/2 -translate-y-1/2"
+          style={{
+            height: `min(${fill * 100}cqh, ${(CARD_MAX_WIDTH / CARD_ASPECT) * 100}cqw)`,
+            marginTop: `${-lift * 100}cqh`,
+          }}
         >
           <Image
             src={card.image}

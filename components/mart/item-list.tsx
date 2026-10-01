@@ -30,6 +30,7 @@ export const optionId = (id: string) => `card-${id}`;
 type ItemListProps = {
   cards: Card[];
   selectedId: string;
+  /** A card was picked, by tapping it or pressing Enter on it. */
   onSelect: (card: Card) => void;
   pocket: Pocket;
   onPocket: (step: 1 | -1) => void;
@@ -90,6 +91,12 @@ export function ItemList({ cards, selectedId, onSelect, pocket, onPocket, sort, 
               tabIndex={0}
               aria-label="Cards"
               aria-activedescendant={optionId(selectedId)}
+              onKeyDown={(e) => {
+                // The A button: pick the card under the cursor.
+                if (e.key !== "Enter" && e.key !== " ") return;
+                e.preventDefault();
+                onSelect(cards.find((c) => c.id === selectedId)!);
+              }}
               className="gba-focus pt-[calc(8*var(--px))] outline-none"
             >
               {cards.map((card) => (

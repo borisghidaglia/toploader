@@ -105,10 +105,13 @@ body {
   border-image: url("/emerald/message-box.png") 8 16 fill / calc(8 * var(--px)) calc(16 * var(--px)) stretch;
 }
 
-/* The buy menu's item list. */
+/* The buy menu's item list. Its tiles leave more empty space around the outline
+   than .gba-window's (4px on the left, 2px elsewhere, against 1px), so it's drawn
+   out past the box to line up with the windows around it. */
 .gba-list-window {
   border: calc(8 * var(--px)) solid transparent;
-  border-image: url("/emerald/list-window.png") 8 fill / calc(8 * var(--px)) stretch;
+  border-image: url("/emerald/list-window.png") 8 fill / calc(8 * var(--px)) /
+    calc(1 * var(--px)) calc(1 * var(--px)) calc(1 * var(--px)) calc(3 * var(--px)) stretch;
 }
 
 /* Every other row is striped, except the cursor's column. */

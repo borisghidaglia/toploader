@@ -1,5 +1,6 @@
 /**
- * Shop sound: background music plus menu blips, all behind one on/off switch.
+ * Shop sound: background music behind an on/off switch, and the game's menu
+ * sound whenever you do something.
  *
  * The music is "Shop" from Pokémon Emerald. The intro plays once, then the
  * main section repeats forever. The loop points come from matching the rip
@@ -69,29 +70,63 @@ export function stopMusic() {
   }, 400);
 }
 
-const BLIPS = {
-  /** Cursor moved. */
-  move: [[1319, 0.035]],
-  /** Something picked. */
-  select: [[988, 0.04], [1319, 0.06]],
-  /** Switched section. */
-  page: [[784, 0.04], [1047, 0.05]],
-} satisfies Record<string, [number, number][]>;
+/**
+ * The menu sound is Emerald's SE_SELECT, which the game plays for every cursor
+ * move, pick, cancel, pocket switch and message page. It's rendered from the
+ * decomp's own sequence and voices by scripts/render-emerald-sfx.py.
+ */
+const SELECT = "/audio/se-select.wav";
+// About as loud against the music as in the game.
+const SFX_VOLUME = 0.55;
 
-/** A short menu blip, only while sound is on. */
-export function blip(kind: keyof typeof BLIPS = "move") {
-  if (!playing || !ctx) return;
-  let at = ctx.currentTime;
-  for (const [hz, length] of BLIPS[kind]) {
-    const osc = ctx.createOscillator();
-    const env = ctx.createGain();
-    osc.type = "square";
-    osc.frequency.value = hz;
-    env.gain.setValueAtTime(0.05, at);
-    env.gain.exponentialRampToValueAtTime(0.001, at + length);
-    osc.connect(env).connect(ctx.destination);
-    osc.start(at);
-    osc.stop(at + length);
-    at += length;
+// The menu sound has its own context, so pausing the music doesn't silence it.
+let sfx: AudioContext | null = null;
+let sfxGain: GainNode | null = null;
+let idle = 0;
+let select: AudioBuffer | null = null;
+let selectLoading: Promise<void> | null = null;
+let selectPlaying: AudioBufferSourceNode | null = null;
+
+function sfxContext() {
+  // Browsers only let audio start from a tap, click or key press.
+  if (!sfx && navigator.userActivation && !navigator.userActivation.isActive) return null;
+  if (!sfx || !sfxGain) {
+    sfx = new AudioContext();
+    sfxGain = new GainNode(sfx, { gain: SFX_VOLUME });
+    sfxGain.connect(sfx.destination);
   }
+  if (sfx.state !== "running") sfx.resume().catch(() => {});
+  // Let the audio hardware rest once the shop goes quiet.
+  clearTimeout(idle);
+  idle = window.setTimeout(() => void sfx?.suspend(), 30_000);
+  return { audio: sfx, out: sfxGain };
+}
+
+/** Fetches the menu sound ahead of the first tap, so that one isn't silent. */
+export function loadSounds() {
+  // An offline context decodes it without waiting for a tap.
+  selectLoading ??= fetch(SELECT)
+    .then((r) => {
+      if (!r.ok) throw new Error(`Couldn't load ${SELECT} (${r.status})`);
+      return r.arrayBuffer();
+    })
+    .then((data) => new OfflineAudioContext(1, 1, 48000).decodeAudioData(data))
+    .then((buffer) => {
+      select = buffer;
+    })
+    .catch(() => {
+      selectLoading = null;
+    });
+}
+
+/** Emerald's menu sound. Call it from the tap, click or key press it answers. */
+export function playSelectSound() {
+  loadSounds();
+  const context = sfxContext();
+  if (!context || !select) return;
+  // The game has one player for it, so a new one cuts off the last.
+  selectPlaying?.stop();
+  selectPlaying = new AudioBufferSourceNode(context.audio, { buffer: select });
+  selectPlaying.connect(context.out);
+  selectPlaying.start();
 }

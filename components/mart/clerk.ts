@@ -13,6 +13,9 @@ export function greeting(count: number) {
   ];
 }
 
+/** When you're back at the list after looking at a card. */
+export const anythingElse = () => ["Is there anything else I can help you with?"];
+
 export function describe(card: Card) {
   const name = card.name.toUpperCase();
   const price = formatPrice(card.price);
