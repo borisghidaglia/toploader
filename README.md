@@ -1,36 +1,54 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Toploader Mart
 
-## Getting Started
+[![Toploader Mart](https://toploader-mart.vercel.app/opengraph-image)](https://toploader-mart.vercel.app)
 
-First, run the development server:
+A Pokémon card shop in the browser, built as a Poké Mart from Pokémon Emerald: the game's own sprites, fonts, music and menu sound, around real cards you can pick up and turn over in 3D.
+
+**[toploader-mart.vercel.app](https://toploader-mart.vercel.app)**
+
+## What's in the shop
+
+- **A buy menu, like the game's.** Cards are listed with a cursor and their prices. Switch between All cards, Vintage and Modern, and sort by price or year. The arrow keys work from anywhere: up and down move the cursor, left and right switch sections, and on a phone-sized screen Escape puts the card back.
+- **A 3D holo card.** Pick a card to bring it out. Drag to turn it and watch the foil catch the light, or flick it to spin it all the way round. Vintage holos shine only in the art box, as the real cards do; modern full arts shine all over.
+- **A page for every card.** Each card has its own address, like [/cards/base1-58](https://toploader-mart.vercel.app/cards/base1-58), and its own link preview image, drawn at build time.
+- **Sound.** The game's menu sound answers every move, and the speaker button turns on Emerald's shop music.
+
+## Where everything comes from
+
+- **Cards and prices:** [TCGdex](https://tcgdex.dev), which supplies the card data, the scans and TCGplayer market prices. A card's shop price is its market price (less 20% for Lightly Played), rounded up to a number a price tag would show. Prices are a snapshot from the last time the data was fetched.
+- **Sprites, fonts and menu sound:** Pokémon Emerald, extracted from [pret/pokeemerald](https://github.com/pret/pokeemerald), the decompilation of the game, by the scripts below.
+- **Music:** "Shop" from Pokémon Emerald, cut from [ipatix's high-quality soundtrack rip](https://www.youtube.com/watch?v=iLd1OoCQNLs) and looped on its own repeat points.
+- **Card back:** drawn for the shop, not the official one.
+
+## Running it
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Then open [localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Everything the shop shows is already in the repo; these rebuild it.
 
-## Learn More
+- **`pnpm cards`** fetches the cards listed in `scripts/fetch-cards.mjs` from TCGdex, with today's prices, into `data/cards.json` and `public/cards/`. To stock another card, add a line for it there.
+- **`scripts/extract-emerald.py`** builds the sprites and fonts in `public/emerald/`, the fonts for the link previews and the Poké Ball favicon from a copy of pokeemerald:
 
-To learn more about Next.js, take a look at the following resources:
+  ```bash
+  git clone --depth 1 https://github.com/pret/pokeemerald.git /tmp/pokeemerald
+  python3 -m venv .venv && .venv/bin/pip install pillow fonttools brotli skia-pathops
+  .venv/bin/python scripts/extract-emerald.py /tmp/pokeemerald
+  ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **`scripts/render-emerald-sfx.py`** renders the menu sound by playing it through a model of the game's sound engine: `python3 scripts/render-emerald-sfx.py /tmp/pokeemerald`.
+- **`node scripts/make-card-back.mjs`** draws the card back.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Built with
 
-## Deploy on Vercel
+[Next.js](https://nextjs.org) 16, [React](https://react.dev) 19, [React Three Fiber](https://r3f.docs.pmnd.rs) and [three.js](https://threejs.org) for the 3D card, and [Tailwind CSS](https://tailwindcss.com). Hosted on [Vercel](https://vercel.com).
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Disclaimer
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+A fan project and a fun experiment, not a real store. Pokémon and its art belong to Nintendo, Creatures and GAME FREAK, and this project isn't affiliated with them.
