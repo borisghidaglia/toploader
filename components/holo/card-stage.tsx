@@ -120,9 +120,11 @@ export function CardStage({
       onPointerCancel={endDrag}
       onKeyDown={onKeyDown}
     >
+      {/* Stays solid while the 3D card fades in over it, and goes once that's done:
+          fading both at once would leave the card half see-through midway. */}
       <div
         className={cn(
-          "pointer-events-none absolute inset-0 transition-opacity duration-500 [container-type:size]",
+          "pointer-events-none absolute inset-0 transition-opacity delay-500 duration-0 [container-type:size]",
           ready && "opacity-0",
         )}
       >

@@ -86,6 +86,7 @@ function HoloCard({ cards, index, input: inputRef, onReady }: HoloCardProps) {
     shown: -1,
     wanted: index,
     lastIndex: index,
+    shownFor: 0, // seconds on screen, for the bob
   });
 
   const prepare = useCallback(
@@ -137,12 +138,11 @@ function HoloCard({ cards, index, input: inputRef, onReady }: HoloCardProps) {
     };
   }, [geometry, materials, shadowMap]);
 
-  useFrame((state, rawDt) => {
+  useFrame((_, rawDt) => {
     const dt = Math.min(rawDt, 1 / 30);
     const m = motion.current;
     const input = inputRef.current;
     const { uniforms } = holo();
-    const t = state.clock.elapsedTime;
 
     // Dragging turns the card both ways directly. Once let go, springs settle the
     // spin on the nearest face and bring the tip back upright; a flick carries
@@ -189,7 +189,12 @@ function HoloCard({ cards, index, input: inputRef, onReady }: HoloCardProps) {
 
     const g = group.current!;
     g.rotation.set(m.pitch, yaw, 0);
-    g.position.y = input.reducedMotion ? 0 : Math.sin(t * 1.1) * 0.05;
+    // The bob starts from rest and eases in, so the card first appears right where
+    // the flat scan it fades in over sits.
+    m.shownFor += dt;
+    const settle = Math.min(1, m.shownFor / 2);
+    const bob = Math.sin(m.shownFor * 1.1) * 0.05 * settle * settle * (3 - 2 * settle);
+    g.position.y = input.reducedMotion ? 0 : bob;
 
     const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
     uniforms.uAngle.value.set(wrap(yaw), wrap(m.pitch));
